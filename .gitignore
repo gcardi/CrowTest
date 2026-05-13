@@ -1,0 +1,34 @@
+# Build output
+/out/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+install_manifest.txt
+
+# Visual Studio Code
+.vscode/
+
+# Qt Creator
+*.pro.user
+*.user
+
+# MinGW/Windows
+*.exe
+*.dll
+*.obj
+*.o
+*.lib
+*.a
+*.pch
+*.pdb
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
