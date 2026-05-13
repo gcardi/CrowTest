@@ -9,13 +9,12 @@
     {
       "name": "mingw",
       "displayName": "MinGW GCC (C:/MinGW/bin/g++.exe)",
-      "generator": "MinGW Makefiles",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "C:/MinGW/bin/gcc.exe",
         "CMAKE_CXX_COMPILER": "C:/MinGW/bin/g++.exe",
-        "CMAKE_MAKE_PROGRAM": "C:/MinGW/bin/mingw32-make.exe",
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ],
