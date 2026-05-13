@@ -1,16 +1,16 @@
 # CrowTest
 
-Un semplice progetto C++ creato con CMake e MinGW.
+Un semplice server HTTP C++ creato con CMake, MinGW e Crow (header-only).
 
 ## Descrizione
 
-Questo repository contiene un piccolo esempio di applicazione console C++ che utilizza Crow (header-only) e viene costruita con CMake.
+Questo repository contiene un esempio di server HTTP scritto in C++ utilizzando la libreria Crow. Il server risponde su porta 18080 con endpoint di esempio.
 
 ## Requisiti
 
 - MinGW
 - CMake
-- GCC / G++
+- GCC / G++ (con supporto C++17)
 
 ## Come compilare
 
@@ -24,6 +24,13 @@ cmake --build out/build/mingw
 ```powershell
 .\out\build\mingw\CrowTest.exe
 ```
+
+Il server sarà disponibile su http://localhost:18080/
+
+## Endpoint
+
+- `GET /` - Messaggio di benvenuto
+- `GET /hello/<nome>` - Saluto personalizzato
 
 ## Licenza
 
