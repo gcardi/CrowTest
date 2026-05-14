@@ -15,6 +15,15 @@ const strengthInput = document.getElementById("strengthInput");
 const sizeInput = document.getElementById("sizeInput");
 const resolutionInput = document.getElementById("resolutionInput");
 const contrastInput = document.getElementById("contrastInput");
+const angleValue = document.getElementById("angleValue");
+const strengthValue = document.getElementById("strengthValue");
+const sizeValue = document.getElementById("sizeValue");
+const contrastValue = document.getElementById("contrastValue");
+
+const formatAngle = (rad) => `${Math.round(rad * 180 / Math.PI)}°`;
+const formatStrength = (v) => Number(v).toFixed(1);
+const formatSize = (v) => Number(v).toFixed(2);
+const formatContrast = (v) => Number(v).toFixed(2);
 
 const state = {
     worldWidth: 4,
@@ -46,6 +55,9 @@ function syncControls() {
     angleInput.value = Math.round(magnet.angle * 180 / Math.PI);
     strengthInput.value = magnet.strength;
     sizeInput.value = magnet.size;
+    angleValue.textContent = formatAngle(magnet.angle);
+    strengthValue.textContent = formatStrength(magnet.strength);
+    sizeValue.textContent = formatSize(magnet.size);
 }
 
 function resizeCanvas() {
@@ -439,17 +451,23 @@ showLinesInput.addEventListener("change", () => {
 });
 
 angleInput.addEventListener("input", () => {
-    selectedMagnet().angle = Number(angleInput.value) * Math.PI / 180;
+    const magnet = selectedMagnet();
+    magnet.angle = Number(angleInput.value) * Math.PI / 180;
+    angleValue.textContent = formatAngle(magnet.angle);
     scheduleFieldRequest();
 });
 
 strengthInput.addEventListener("input", () => {
-    selectedMagnet().strength = Number(strengthInput.value);
+    const magnet = selectedMagnet();
+    magnet.strength = Number(strengthInput.value);
+    strengthValue.textContent = formatStrength(magnet.strength);
     scheduleFieldRequest();
 });
 
 sizeInput.addEventListener("input", () => {
-    selectedMagnet().size = Number(sizeInput.value);
+    const magnet = selectedMagnet();
+    magnet.size = Number(sizeInput.value);
+    sizeValue.textContent = formatSize(magnet.size);
     scheduleFieldRequest();
 });
 
@@ -459,6 +477,7 @@ resolutionInput.addEventListener("change", () => {
 });
 
 contrastInput.addEventListener("input", () => {
+    contrastValue.textContent = formatContrast(contrastInput.value);
     buildHeatmap();
     state.needsRender = true;
 });

@@ -150,6 +150,20 @@ label {
     font-size: 0.9rem;
 }
 
+.control-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.control-label output {
+    color: var(--ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.86rem;
+}
+
 input[type="range"] {
     width: 100%;
     accent-color: var(--cyan);

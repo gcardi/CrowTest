@@ -30,15 +30,24 @@
             <section class="panel-section">
                 <h2>Selected Magnet</h2>
                 <label>
-                    Angle
+                    <span class="control-label">
+                        Angle
+                        <output id="angleValue">0&deg;</output>
+                    </span>
                     <input id="angleInput" type="range" min="-180" max="180" value="0">
                 </label>
                 <label>
-                    Strength
+                    <span class="control-label">
+                        Strength
+                        <output id="strengthValue">4.0</output>
+                    </span>
                     <input id="strengthInput" type="range" min="0" max="8" value="4" step="0.1">
                 </label>
                 <label>
-                    Size
+                    <span class="control-label">
+                        Size
+                        <output id="sizeValue">0.18</output>
+                    </span>
                     <input id="sizeInput" type="range" min="0.05" max="0.45" value="0.18" step="0.01">
                 </label>
             </section>
@@ -55,7 +64,10 @@
                     </select>
                 </label>
                 <label>
-                    Contrast
+                    <span class="control-label">
+                        Contrast
+                        <output id="contrastValue">1.15</output>
+                    </span>
                     <input id="contrastInput" type="range" min="0.25" max="3" value="1.15" step="0.05">
                 </label>
             </section>
