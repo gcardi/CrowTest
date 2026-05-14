@@ -10,7 +10,29 @@
 #include <string>
 #include <vector>
 
-namespace {
+using std::cerr;
+using std::clamp;
+using std::cos;
+using std::cout;
+using std::exception;
+using std::ifstream;
+using std::ios;
+using std::max;
+using std::min;
+using std::ostringstream;
+using std::runtime_error;
+using std::setprecision;
+using std::sin;
+using std::sqrt;
+using std::string;
+using std::vector;
+using std::filesystem::absolute;
+using std::filesystem::exists;
+using std::filesystem::is_regular_file;
+using std::filesystem::path;
+using std::filesystem::weakly_canonical;
+
+namespace MagSim {
 
 struct Magnet {
     double x = 0.0;
@@ -26,7 +48,7 @@ struct FieldRequest {
     int height = 128;
     double world_width = 4.0;
     double world_height = 3.0;
-    std::vector<Magnet> magnets;
+    vector<Magnet> magnets;
 };
 
 double json_number(const crow::json::rvalue& obj, const char* key, double fallback)
@@ -39,33 +61,33 @@ int json_int(const crow::json::rvalue& obj, const char* key, int fallback)
     return obj.has(key) ? static_cast<int>(obj[key].i()) : fallback;
 }
 
-FieldRequest parse_field_request(const std::string& message)
+FieldRequest parse_field_request(const string& message)
 {
     auto body = crow::json::load(message);
     if (!body) {
-        throw std::runtime_error("Invalid JSON message");
+        throw runtime_error("Invalid JSON message");
     }
 
     FieldRequest request;
     request.request_id = json_int(body, "requestId", 0);
-    request.width = std::clamp(json_int(body, "width", 128), 32, 384);
-    request.height = std::clamp(json_int(body, "height", 128), 32, 384);
-    request.world_width = std::clamp(json_number(body, "worldWidth", 4.0), 0.5, 20.0);
-    request.world_height = std::clamp(json_number(body, "worldHeight", 3.0), 0.5, 20.0);
+    request.width = clamp(json_int(body, "width", 128), 32, 384);
+    request.height = clamp(json_int(body, "height", 128), 32, 384);
+    request.world_width = clamp(json_number(body, "worldWidth", 4.0), 0.5, 20.0);
+    request.world_height = clamp(json_number(body, "worldHeight", 3.0), 0.5, 20.0);
 
     if (body.has("magnets")) {
         const auto& magnets = body["magnets"];
-        const auto count = std::min<size_t>(magnets.size(), 64);
+        const auto count = min<size_t>(magnets.size(), 64);
         request.magnets.reserve(count);
 
         for (size_t i = 0; i < count; ++i) {
             const auto& src = magnets[i];
             Magnet magnet;
-            magnet.x = std::clamp(json_number(src, "x", 0.0), -10.0, 10.0);
-            magnet.y = std::clamp(json_number(src, "y", 0.0), -10.0, 10.0);
+            magnet.x = clamp(json_number(src, "x", 0.0), -10.0, 10.0);
+            magnet.y = clamp(json_number(src, "y", 0.0), -10.0, 10.0);
             magnet.angle = json_number(src, "angle", 0.0);
-            magnet.strength = std::clamp(json_number(src, "strength", 1.0), -20.0, 20.0);
-            magnet.size = std::clamp(json_number(src, "size", 0.12), 0.03, 1.0);
+            magnet.strength = clamp(json_number(src, "strength", 1.0), -20.0, 20.0);
+            magnet.size = clamp(json_number(src, "size", 0.12), 0.03, 1.0);
             request.magnets.push_back(magnet);
         }
     }
@@ -73,55 +95,55 @@ FieldRequest parse_field_request(const std::string& message)
     return request;
 }
 
-std::string compute_field_response(const FieldRequest& request)
+string compute_field_response(const FieldRequest& request)
 {
-    std::vector<double> bx_values;
-    std::vector<double> by_values;
-    std::vector<double> magnitudes;
+    vector<double> bx_values;
+    vector<double> by_values;
+    vector<double> magnitudes;
     bx_values.resize(static_cast<size_t>(request.width) * request.height);
     by_values.resize(bx_values.size());
     magnitudes.resize(bx_values.size());
 
-    double max_magnitude = 0.0;
-    const double half_w = request.world_width * 0.5;
-    const double half_h = request.world_height * 0.5;
+    auto max_magnitude = 0.0;
+    auto half_w = request.world_width * 0.5;
+    auto half_h = request.world_height * 0.5;
 
     for (int row = 0; row < request.height; ++row) {
-        const double y = half_h - (request.world_height * row) / (request.height - 1);
+        auto y = half_h - (request.world_height * row) / (request.height - 1);
 
         for (int col = 0; col < request.width; ++col) {
-            const double x = -half_w + (request.world_width * col) / (request.width - 1);
-            double bx = 0.0;
-            double by = 0.0;
+            auto x = -half_w + (request.world_width * col) / (request.width - 1);
+            auto bx = 0.0;
+            auto by = 0.0;
 
             for (const auto& magnet : request.magnets) {
-                const double dx = x - magnet.x;
-                const double dy = y - magnet.y;
-                const double mx = std::cos(magnet.angle) * magnet.strength;
-                const double my = std::sin(magnet.angle) * magnet.strength;
-                const double softening = std::max(0.025, magnet.size * 0.45);
-                const double r2 = dx * dx + dy * dy + softening * softening;
-                const double inv_r = 1.0 / std::sqrt(r2);
-                const double inv_r3 = inv_r * inv_r * inv_r;
-                const double inv_r5 = inv_r3 / r2;
-                const double dot = mx * dx + my * dy;
+                auto dx = x - magnet.x;
+                auto dy = y - magnet.y;
+                auto mx = cos(magnet.angle) * magnet.strength;
+                auto my = sin(magnet.angle) * magnet.strength;
+                auto softening = max(0.025, magnet.size * 0.45);
+                auto r2 = dx * dx + dy * dy + softening * softening;
+                auto inv_r = 1.0 / sqrt(r2);
+                auto inv_r3 = inv_r * inv_r * inv_r;
+                auto inv_r5 = inv_r3 / r2;
+                auto dot = mx * dx + my * dy;
 
                 bx += 3.0 * dx * dot * inv_r5 - mx * inv_r3;
                 by += 3.0 * dy * dot * inv_r5 - my * inv_r3;
             }
 
-            const size_t index = static_cast<size_t>(row) * request.width + col;
-            const double magnitude = std::sqrt(bx * bx + by * by);
+            auto index = static_cast<size_t>(row) * request.width + col;
+            auto magnitude = sqrt(bx * bx + by * by);
             bx_values[index] = bx;
             by_values[index] = by;
             magnitudes[index] = magnitude;
-            max_magnitude = std::max(max_magnitude, magnitude);
+            max_magnitude = max(max_magnitude, magnitude);
         }
     }
 
-    std::ostringstream out;
-    out.setf(std::ios::fixed);
-    out << std::setprecision(6);
+    ostringstream out;
+    out.setf(ios::fixed);
+    out << setprecision(6);
     out << "{\"type\":\"field\",\"requestId\":" << request.request_id
         << ",\"width\":" << request.width
         << ",\"height\":" << request.height
@@ -141,14 +163,14 @@ std::string compute_field_response(const FieldRequest& request)
     return out.str();
 }
 
-std::string compute_field_response(const std::string& message)
+string compute_field_response(const string& message)
 {
     return compute_field_response(parse_field_request(message));
 }
 
-std::string error_response(const std::string& message)
+string error_response(const string& message)
 {
-    std::ostringstream out;
+    ostringstream out;
     out << "{\"type\":\"error\",\"message\":\"";
     for (const char c : message) {
         if (c == '"' || c == '\\') {
@@ -162,28 +184,28 @@ std::string error_response(const std::string& message)
     return out.str();
 }
 
-} // namespace
+} // namespace MagSim
 
-static crow::response serve_static_file(const std::filesystem::path& root, const std::string& rel_path)
+static crow::response serve_static_file(const path& root, const string& rel_path)
 {
-    std::filesystem::path file_path = root / rel_path;
-    std::filesystem::path canon_root = std::filesystem::weakly_canonical(root);
-    std::filesystem::path canon_file = std::filesystem::weakly_canonical(file_path);
+    auto file_path = root / rel_path;
+    auto canon_root = weakly_canonical(root);
+    auto canon_file = weakly_canonical(file_path);
 
     if (canon_file.string().rfind(canon_root.string(), 0) != 0) {
         return crow::response(403);
     }
 
-    if (!std::filesystem::exists(canon_file) || !std::filesystem::is_regular_file(canon_file)) {
+    if (!exists(canon_file) || !is_regular_file(canon_file)) {
         return crow::response(404);
     }
 
-    std::ifstream input(canon_file, std::ios::binary);
+    ifstream input(canon_file, ios::binary);
     if (!input) {
         return crow::response(500);
     }
 
-    std::ostringstream buffer;
+    ostringstream buffer;
     buffer << input.rdbuf();
     crow::response res(buffer.str());
 
@@ -204,28 +226,28 @@ static crow::response serve_static_file(const std::filesystem::path& root, const
 int main(int argc, char** argv)
 {
     crow::SimpleApp app;
-    const std::filesystem::path exe_dir = std::filesystem::absolute(argv[0]).parent_path();
-    const std::filesystem::path static_root = exe_dir / "static";
+    const auto exe_dir = absolute(argv[0]).parent_path();
+    const auto static_root = exe_dir / "static";
 
-    std::cout << "exe_dir=" << exe_dir.string() << "\n";
-    std::cout << "static_root=" << static_root.string() << "\n";
-    std::cout << "static_exists=" << (std::filesystem::exists(static_root) ? "yes" : "no") << "\n";
+    cout << "exe_dir=" << exe_dir.string() << "\n";
+    cout << "static_root=" << static_root.string() << "\n";
+    cout << "static_exists=" << (exists(static_root) ? "yes" : "no") << "\n";
 
     CROW_ROUTE(app, "/")([static_root]() {
         return serve_static_file(static_root, "index.html");
     });
 
-    CROW_ROUTE(app, "/hello/<string>")([](std::string name){
+    CROW_ROUTE(app, "/hello/<string>")([](string name){
         return "Hello, " + name + "!";
     });
 
     CROW_ROUTE(app, "/api/field").methods(crow::HTTPMethod::Post)([](const crow::request& req) {
         try {
-            crow::response res(compute_field_response(req.body));
+            crow::response res(MagSim::compute_field_response(req.body));
             res.set_header("Content-Type", "application/json; charset=UTF-8");
             return res;
-        } catch (const std::exception& e) {
-            crow::response res(400, error_response(e.what()));
+        } catch (const exception& e) {
+            crow::response res(400, MagSim::error_response(e.what()));
             res.set_header("Content-Type", "application/json; charset=UTF-8");
             return res;
         }
@@ -233,39 +255,39 @@ int main(int argc, char** argv)
 
     CROW_WEBSOCKET_ROUTE(app, "/ws/field")
         .onopen([](crow::websocket::connection&) {
-            std::cout << "field websocket opened\n";
+            cout << "field websocket opened\n";
         })
-        .onmessage([](crow::websocket::connection& conn, const std::string& message, bool is_binary) {
+        .onmessage([](crow::websocket::connection& conn, const string& message, bool is_binary) {
             if (is_binary) {
-                conn.send_text(error_response("Binary requests are not supported yet"));
+                conn.send_text(MagSim::error_response("Binary requests are not supported yet"));
                 return;
             }
 
             try {
-                conn.send_text(compute_field_response(message));
-            } catch (const std::exception& e) {
-                conn.send_text(error_response(e.what()));
+                conn.send_text(MagSim::compute_field_response(message));
+            } catch (const exception& e) {
+                conn.send_text(MagSim::error_response(e.what()));
             }
         })
-        .onerror([](crow::websocket::connection&, const std::string& message) {
-            std::cerr << "field websocket error: " << message << "\n";
+        .onerror([](crow::websocket::connection&, const string& message) {
+            cerr << "field websocket error: " << message << "\n";
         })
-        .onclose([](crow::websocket::connection&, const std::string& reason, uint16_t) {
-            std::cout << "field websocket closed: " << reason << "\n";
+        .onclose([](crow::websocket::connection&, const string& reason, uint16_t) {
+            cout << "field websocket closed: " << reason << "\n";
         });
 
-    CROW_ROUTE(app, "/assets/<path>")([static_root](const std::string& path) {
+    CROW_ROUTE(app, "/assets/<path>")([static_root](const string& path) {
         return serve_static_file(static_root, path);
     });
 
     try {
         app.port(18080).multithreaded().run();
-        std::cout << "server.run() returned normally\n";
-    } catch (const std::exception& e) {
-        std::cerr << "EXCEPTION: " << e.what() << "\n";
+        cout << "server.run() returned normally\n";
+    } catch (const exception& e) {
+        cerr << "EXCEPTION: " << e.what() << "\n";
         return 1;
     } catch (...) {
-        std::cerr << "EXCEPTION: unknown\n";
+        cerr << "EXCEPTION: unknown\n";
         return 1;
     }
 
