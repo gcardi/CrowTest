@@ -1,18 +1,75 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrowTest Microsito</title>
+    <title>Magnetic Field Lab</title>
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>CrowTest Microsito</h1>
-        <p>Questa pagina viene servita dal server CrowCpp.</p>
-        <button id="greetButton">Saluta il server</button>
-        <div id="message"></div>
-    </div>
+    <main class="app-shell">
+        <aside class="control-panel" aria-label="Magnet controls">
+            <div class="brand">
+                <span class="brand-mark"></span>
+                <div>
+                    <h1>Magnetic Field Lab</h1>
+                    <span id="connectionStatus">Connecting</span>
+                </div>
+            </div>
+
+            <div class="toolbar" aria-label="Scene tools">
+                <button id="addMagnet" type="button" title="Add magnet">+</button>
+                <button id="removeMagnet" type="button" title="Remove selected magnet">-</button>
+                <button id="resetScene" type="button" title="Reset scene">&#8635;</button>
+                <label class="toggle" title="Show field lines">
+                    <input id="showLines" type="checkbox" checked>
+                    <span>Lines</span>
+                </label>
+            </div>
+
+            <section class="panel-section">
+                <h2>Selected Magnet</h2>
+                <label>
+                    Angle
+                    <input id="angleInput" type="range" min="-180" max="180" value="0">
+                </label>
+                <label>
+                    Strength
+                    <input id="strengthInput" type="range" min="-8" max="8" value="4" step="0.1">
+                </label>
+                <label>
+                    Size
+                    <input id="sizeInput" type="range" min="0.05" max="0.45" value="0.18" step="0.01">
+                </label>
+            </section>
+
+            <section class="panel-section">
+                <h2>Grid</h2>
+                <label>
+                    Resolution
+                    <select id="resolutionInput">
+                        <option value="96">96 x 96</option>
+                        <option value="128" selected>128 x 128</option>
+                        <option value="192">192 x 192</option>
+                        <option value="256">256 x 256</option>
+                    </select>
+                </label>
+                <label>
+                    Contrast
+                    <input id="contrastInput" type="range" min="0.25" max="3" value="1.15" step="0.05">
+                </label>
+            </section>
+        </aside>
+
+        <section class="workspace" aria-label="Field workspace">
+            <canvas id="fieldCanvas"></canvas>
+            <div class="readout">
+                <span id="sampleReadout">B = 0.000</span>
+                <span id="gridReadout">128 x 128</span>
+            </div>
+        </section>
+    </main>
+
     <script src="/assets/js/app.js"></script>
 </body>
 </html>
