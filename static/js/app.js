@@ -361,8 +361,6 @@ canvas.addEventListener("pointerdown", (event) => {
     canvas.setPointerCapture(event.pointerId);
     const hit = hitTest(event.offsetX, event.offsetY);
     if (!hit) {
-        const pos = screenToWorld(event.offsetX, event.offsetY);
-        addMagnet(pos.x, pos.y);
         return;
     }
 
