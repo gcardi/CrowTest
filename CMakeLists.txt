@@ -12,6 +12,8 @@ target_link_libraries(CrowTest ws2_32 mswsock)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
 
 add_custom_command(TARGET CrowTest POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E remove_directory
+        "$<TARGET_FILE_DIR:CrowTest>/static"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/static"
         "$<TARGET_FILE_DIR:CrowTest>/static"
