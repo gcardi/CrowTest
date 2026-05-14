@@ -30,9 +30,6 @@ const state = {
     worldHeight: 3,
     resolution: 128,
     selectedId: 1,
-    requestId: 0,
-    lastAppliedRequest: 0,
-    socket: null,
     field: null,
     drag: null,
     needsRender: true,
@@ -85,78 +82,55 @@ function screenToWorld(x, y) {
     };
 }
 
-function setStatus(text, className) {
-    statusEl.textContent = text;
-    statusEl.className = className;
-}
+function computeField() {
+    const width = state.resolution;
+    const height = state.resolution;
+    const worldWidth = state.worldWidth;
+    const worldHeight = state.worldHeight;
+    const magnets = state.magnets;
+    const values = new Array(width * height);
+    const halfW = worldWidth * 0.5;
+    const halfH = worldHeight * 0.5;
+    let maxMagnitude = 0;
 
-function connectSocket() {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    state.socket = new WebSocket(`${protocol}//${window.location.host}/ws/field`);
+    for (let row = 0; row < height; row += 1) {
+        const y = halfH - (worldHeight * row) / (height - 1);
 
-    state.socket.addEventListener("open", () => {
-        setStatus("Live", "ready");
-        requestField();
-    });
+        for (let col = 0; col < width; col += 1) {
+            const x = -halfW + (worldWidth * col) / (width - 1);
+            let bx = 0;
+            let by = 0;
 
-    state.socket.addEventListener("message", (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "error") {
-            setStatus(data.message, "offline");
-            return;
+            for (const magnet of magnets) {
+                const dx = x - magnet.x;
+                const dy = y - magnet.y;
+                const mx = Math.cos(magnet.angle) * magnet.strength;
+                const my = Math.sin(magnet.angle) * magnet.strength;
+                const softening = Math.max(0.025, magnet.size * 0.45);
+                const r2 = dx * dx + dy * dy + softening * softening;
+                const invR = 1 / Math.sqrt(r2);
+                const invR3 = invR * invR * invR;
+                const invR5 = invR3 / r2;
+                const dot = mx * dx + my * dy;
+
+                bx += 3 * dx * dot * invR5 - mx * invR3;
+                by += 3 * dy * dot * invR5 - my * invR3;
+            }
+
+            const magnitude = Math.hypot(bx, by);
+            values[row * width + col] = [bx, by, magnitude];
+            if (magnitude > maxMagnitude) {
+                maxMagnitude = magnitude;
+            }
         }
-        if (data.requestId < state.lastAppliedRequest) {
-            return;
-        }
-
-        state.lastAppliedRequest = data.requestId;
-        state.field = data;
-        gridReadout.textContent = `${data.width} x ${data.height}`;
-        buildHeatmap();
-        state.needsRender = true;
-    });
-
-    state.socket.addEventListener("close", () => {
-        setStatus("Offline", "offline");
-        window.setTimeout(connectSocket, 900);
-    });
-}
-
-let requestTimer = 0;
-function scheduleFieldRequest() {
-    window.clearTimeout(requestTimer);
-    requestTimer = window.setTimeout(requestField, 45);
-    state.needsRender = true;
-}
-
-async function requestField() {
-    const payload = JSON.stringify({
-        requestId: ++state.requestId,
-        width: state.resolution,
-        height: state.resolution,
-        worldWidth: state.worldWidth,
-        worldHeight: state.worldHeight,
-        magnets: state.magnets.map(({ x, y, angle, strength, size }) => ({
-            x,
-            y,
-            angle,
-            strength,
-            size
-        }))
-    });
-
-    if (state.socket && state.socket.readyState === WebSocket.OPEN) {
-        state.socket.send(payload);
-        return;
     }
 
-    const response = await fetch("/api/field", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload
-    });
-    const data = await response.json();
-    state.field = data;
+    return { width, height, worldWidth, worldHeight, maxMagnitude, values };
+}
+
+function scheduleFieldRequest() {
+    state.field = computeField();
+    gridReadout.textContent = `${state.field.width} x ${state.field.height}`;
     buildHeatmap();
     state.needsRender = true;
 }
@@ -484,7 +458,9 @@ contrastInput.addEventListener("input", () => {
 
 window.addEventListener("resize", resizeCanvas);
 
+statusEl.textContent = "Local";
+statusEl.className = "ready";
 resizeCanvas();
 syncControls();
-connectSocket();
+scheduleFieldRequest();
 render();
